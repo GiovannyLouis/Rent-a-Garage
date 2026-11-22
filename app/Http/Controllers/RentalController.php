@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -384,5 +385,205 @@ class RentalController extends Controller
         }
 
         return (int) round($biayaSewa + $biayaListrik);
+    }
+
+    /**
+     * Menampilkan daftar garasi yang sedang disewa pada hari ini untuk Admin.
+     */
+    public function adminIndex(): View
+    {
+        $today = now()->toDateString();
+
+        $activeRentals = Rental::with(['user', 'garage', 'payments'])
+            ->whereDate('tanggal_mulai', '<=', $today)
+            ->whereDate('tanggal_selesai', '>=', $today)
+            ->whereHas('garage', function ($query) {
+                $query->where('status', Garage::STATUS_USED);
+            })
+            ->orderBy('tanggal_selesai')
+            ->get();
+
+        return view('admin.rentals.index', compact('activeRentals', 'today'));
+    }
+
+    /**
+     * Menampilkan form perpanjangan (pilih tipe sewa harian/bulanan & jumlah hari)
+     * beserta preview tanggal selesai baru dan sisa biaya.
+     */
+    /**
+     * Halaman 1 Perpanjangan: Form memilih tipe perpanjangan (Harian / Bulanan) & jumlah hari.
+     */
+    public function extendForm(int $rentalId): View|RedirectResponse
+    {
+        $rental = Rental::with(['user', 'garage'])->findOrFail($rentalId);
+        $today = now()->toDateString();
+
+        if ($rental->garage->status !== Garage::STATUS_USED || $rental->tanggal_selesai->toDateString() < $today) {
+            return redirect()
+                ->route('admin.rentals.index')
+                ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
+        }
+
+        return view('admin.rentals.extend', compact('rental'));
+    }
+
+    /**
+     * Halaman 2 Perpanjangan: Menampilkan rincian tanggal baru, sisa biaya, dan form upload bukti bayar.
+     */
+    public function extendConfirm(Request $request, int $rentalId): View|RedirectResponse
+    {
+        $rental = Rental::with(['user', 'garage'])->findOrFail($rentalId);
+        $today = now()->toDateString();
+
+        if ($rental->garage->status !== Garage::STATUS_USED || $rental->tanggal_selesai->toDateString() < $today) {
+            return redirect()
+                ->route('admin.rentals.index')
+                ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
+        }
+
+        $validator = Validator::make(
+            $request->only(['tipe_sewa', 'jumlah_hari']),
+            [
+                'tipe_sewa' => ['required', Rule::in([Payment::SEWA_HARIAN, Payment::SEWA_BULANAN])],
+                'jumlah_hari' => [
+                    'nullable',
+                    'required_if:tipe_sewa,' . Payment::SEWA_HARIAN,
+                    'integer',
+                    'min:1',
+                    'max:30',
+                ],
+            ],
+            [
+                'tipe_sewa.required' => 'Tipe perpanjangan wajib dipilih.',
+                'tipe_sewa.in' => 'Tipe sewa tidak valid.',
+                'jumlah_hari.required_if' => 'Jumlah hari wajib diisi untuk perpanjangan harian.',
+                'jumlah_hari.integer' => 'Jumlah hari harus berupa angka bulat.',
+                'jumlah_hari.min' => 'Jumlah hari minimal 1 hari.',
+                'jumlah_hari.max' => 'Jumlah hari untuk sewa harian tidak boleh lebih dari 30 hari.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('admin.rentals.extend.form', $rental->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $tipeSewa = $request->query('tipe_sewa');
+        $jumlahHariInput = $tipeSewa === Payment::SEWA_HARIAN
+            ? (int) $request->query('jumlah_hari')
+            : 0;
+
+        $oldEndDate = $rental->tanggal_selesai->toDateString();
+        $newTanggalSelesai = $this->calculateEndDate($tipeSewa, $oldEndDate, $jumlahHariInput);
+        $sisaBiaya = $this->calculateExtensionCost($rental, $tipeSewa, $jumlahHariInput);
+        $tambahanHari = (int) $rental->tanggal_selesai->diffInDays(Carbon::parse($newTanggalSelesai));
+
+        return view('admin.rentals.confirm', compact(
+            'rental',
+            'tipeSewa',
+            'jumlahHariInput',
+            'tambahanHari',
+            'newTanggalSelesai',
+            'sisaBiaya'
+        ));
+    }
+
+    /**
+     * Memproses perpanjangan sewa: update tanggal_selesai & jumlah_hari pada rental lama
+     * serta mencatat payment baru dengan tujuan 'perpanjangan'.
+     */
+    public function extend(Request $request, int $rentalId): RedirectResponse
+    {
+        $rental = Rental::with('garage')->findOrFail($rentalId);
+        $today = now()->toDateString();
+
+        if ($rental->garage->status !== Garage::STATUS_USED || $rental->tanggal_selesai->toDateString() < $today) {
+            return redirect()
+                ->route('admin.rentals.index')
+                ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
+        }
+
+        $validated = $request->validate([
+            'tipe_sewa' => ['required', Rule::in([Payment::SEWA_HARIAN, Payment::SEWA_BULANAN])],
+            'jumlah_hari' => [
+                'nullable',
+                'required_if:tipe_sewa,' . Payment::SEWA_HARIAN,
+                'integer',
+                'min:1',
+                'max:30',
+            ],
+            'bukti_bayar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ], [
+            'tipe_sewa.required' => 'Tipe sewa perpanjangan wajib dipilih.',
+            'jumlah_hari.required_if' => 'Jumlah hari wajib diisi untuk perpanjangan harian.',
+            'jumlah_hari.min' => 'Jumlah hari minimal 1 hari.',
+            'jumlah_hari.max' => 'Jumlah hari untuk sewa harian tidak boleh lebih dari 30 hari.',
+            'bukti_bayar.required' => 'Bukti bayar perpanjangan wajib diupload.',
+            'bukti_bayar.image' => 'Bukti bayar harus berupa gambar (JPG/PNG/WEBP).',
+            'bukti_bayar.max' => 'Ukuran gambar maksimal 2 MB.',
+        ]);
+
+        $tipeSewa = $validated['tipe_sewa'];
+        $jumlahHariInput = $tipeSewa === Payment::SEWA_HARIAN
+            ? (int) $validated['jumlah_hari']
+            : 0;
+
+        $oldEndDate = $rental->tanggal_selesai->toDateString();
+        $newTanggalSelesai = $this->calculateEndDate($tipeSewa, $oldEndDate, $jumlahHariInput);
+        $sisaBiaya = $this->calculateExtensionCost($rental, $tipeSewa, $jumlahHariInput);
+        $jumlahHariBaru = (int) $rental->tanggal_mulai->diffInDays(Carbon::parse($newTanggalSelesai));
+
+        $buktiPath = $validated['bukti_bayar']->store('bukti-bayar', 'public');
+
+        try {
+            DB::transaction(function () use (
+                $rental,
+                $newTanggalSelesai,
+                $jumlahHariBaru,
+                $tipeSewa,
+                $sisaBiaya,
+                $buktiPath
+            ): void {
+                $rental->update([
+                    'tanggal_selesai' => $newTanggalSelesai,
+                    'jumlah_hari' => $jumlahHariBaru,
+                ]);
+
+                Payment::create([
+                    'rental_id' => $rental->id,
+                    'tujuan' => Payment::TUJUAN_PERPANJANGAN,
+                    'tipe_sewa' => $tipeSewa,
+                    'nominal' => $sisaBiaya,
+                    'bukti_bayar' => $buktiPath,
+                ]);
+            });
+        } catch (Throwable $e) {
+            Storage::disk('public')->delete($buktiPath);
+            throw $e;
+        }
+
+        return redirect()
+            ->route('admin.rentals.index')
+            ->with('success', "Perpanjangan garasi {$rental->garage->kode} hingga " . Carbon::parse($newTanggalSelesai)->format('d/m/Y') . ' berhasil! Biaya tambahan: Rp ' . number_format($sisaBiaya, 0, ',', '.'));
+    }
+
+    /**
+     * Menghitung biaya perpanjangan sewa berdasarkan tipe sewa dan jumlah hari tambahan.
+     *
+     * @throws InvalidArgumentException Jika tipe sewa tidak dikenali.
+     */
+    public function calculateExtensionCost(Rental $rental, string $tipeSewa, int $jumlahHari): int
+    {
+        if ($tipeSewa === Payment::SEWA_BULANAN) {
+            return $rental->garage->getHargaBulanan();
+        }
+
+        if ($tipeSewa === Payment::SEWA_HARIAN) {
+            return $rental->garage->harga_harian * $jumlahHari;
+        }
+
+        throw new InvalidArgumentException("Tipe sewa '{$tipeSewa}' tidak valid.");
     }
 }

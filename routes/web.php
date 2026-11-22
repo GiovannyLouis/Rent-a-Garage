@@ -48,7 +48,18 @@ Route::middleware(['auth', 'role:admin'])
             $totalGarages = Garage::count();
             $availableGarages = Garage::where('status', Garage::STATUS_AVAILABLE)->count();
 
-            return view('admin.dashboard', compact('pendingCount', 'totalGarages', 'availableGarages'));
+            $today = now()->toDateString();
+            $activeRentalsCount = Rental::whereDate('tanggal_mulai', '<=', $today)
+                ->whereDate('tanggal_selesai', '>=', $today)
+                ->whereHas('garage', fn ($q) => $q->where('status', Garage::STATUS_USED))
+                ->count();
+
+            return view('admin.dashboard', compact(
+                'pendingCount',
+                'totalGarages',
+                'availableGarages',
+                'activeRentalsCount'
+            ));
         })->name('dashboard');
 
         // Verifikasi Pendaftar
@@ -64,6 +75,16 @@ Route::middleware(['auth', 'role:admin'])
             ->name('garages.index');
         Route::post('/garages', [GarageController::class, 'storeBatch'])
             ->name('garages.store');
+
+        // Perpanjang Status Garasi
+        Route::get('/rentals', [RentalController::class, 'adminIndex'])
+            ->name('rentals.index');
+        Route::get('/rentals/{rentalId}/extend', [RentalController::class, 'extendForm'])
+            ->name('rentals.extend.form');
+        Route::get('/rentals/{rentalId}/extend/confirm', [RentalController::class, 'extendConfirm'])
+            ->name('rentals.extend.confirm');
+        Route::post('/rentals/{rentalId}/extend', [RentalController::class, 'extend'])
+            ->name('rentals.extend');
     });
 
 // Route khusus Penyewa

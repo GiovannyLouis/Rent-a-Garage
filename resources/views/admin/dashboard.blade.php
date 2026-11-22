@@ -27,5 +27,13 @@
                 Kelola Garasi
             </a>
         </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p class="text-sm font-medium text-slate-500">Garasi Sedang Disewa Hari Ini</p>
+            <p class="mt-1 text-2xl font-bold text-slate-900">{{ $activeRentalsCount ?? 0 }} garasi</p>
+            <a href="{{ route('admin.rentals.index') }}" class="mt-3 inline-block rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                Perpanjang Status Garasi
+            </a>
+        </div>
     </div>
 @endsection
