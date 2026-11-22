@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\GarageController;
 use App\Http\Controllers\RentalController;
+use App\Http\Controllers\ReportController;
 use App\Models\Rental;
 use App\Models\Garage;
 use App\Models\User;
@@ -85,6 +86,10 @@ Route::middleware(['auth', 'role:admin'])
             ->name('rentals.extend.confirm');
         Route::post('/rentals/{rentalId}/extend', [RentalController::class, 'extend'])
             ->name('rentals.extend');
+
+        // Laporan Sewa Garasi
+        Route::get('/reports', [ReportController::class, 'index'])
+            ->name('reports.index');
     });
 
 // Route khusus Penyewa

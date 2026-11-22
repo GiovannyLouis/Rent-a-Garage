@@ -20,6 +20,7 @@
                         <a href="{{ route('admin.verifications.index') }}" class="text-slate-200 hover:text-white">Verifikasi Penyewa</a>
                         <a href="{{ route('admin.garages.index') }}" class="text-slate-200 hover:text-white">Kelola Garasi</a>
                         <a href="{{ route('admin.rentals.index') }}" class="text-slate-200 hover:text-white">Perpanjang Sewa</a>
+                        <a href="{{ route('admin.reports.index') }}" class="text-slate-200 hover:text-white">Laporan</a>
                     @else
                         <a href="{{ route('penyewa.dashboard') }}" class="text-slate-200 hover:text-white">Dashboard</a>
                         <a href="{{ route('penyewa.rentals.index') }}" class="text-slate-200 hover:text-white">Sewa Saya</a>

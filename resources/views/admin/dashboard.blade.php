@@ -35,5 +35,13 @@
                 Perpanjang Status Garasi
             </a>
         </div>
+
+        <div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p class="text-sm font-medium text-slate-500">Laporan Persewaan</p>
+            <p class="mt-1 text-sm text-slate-600">Rekap per bulan, per hari, per tipe garasi, dan per penyewa.</p>
+            <a href="{{ route('admin.reports.index') }}" class="mt-3 inline-block rounded bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-900">
+                Lihat Laporan Sewa
+            </a>
+        </div>
     </div>
 @endsection
