@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\VerificationController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -35,7 +36,20 @@ Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+        Route::get('/dashboard', function () {
+            $pendingCount = User::where('role', User::ROLE_PENYEWA)
+                ->where('status', User::STATUS_PENDING)
+                ->count();
+
+            return view('admin.dashboard', compact('pendingCount'));
+        })->name('dashboard');
+
+        Route::get('/verifications', [VerificationController::class, 'index'])
+            ->name('verifications.index');
+        Route::patch('/verifications/{userId}/approve', [VerificationController::class, 'approve'])
+            ->name('verifications.approve');
+        Route::patch('/verifications/{userId}/reject', [VerificationController::class, 'reject'])
+            ->name('verifications.reject');
     });
 
 // Route khusus Penyewa

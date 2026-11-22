@@ -17,6 +17,14 @@
         .alert-success { background: #dcfce7; color: #166534; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; }
         .alert-error { background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; }
         .text-muted { color: #6b7280; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; margin-bottom: 24px; font-size: 14px; }
+        th, td { border: 1px solid #d1d5db; padding: 8px 10px; text-align: left; }
+        th { background: #f3f4f6; }
+        .btn-success { background: #16a34a; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-danger-sm { background: #dc2626; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-approved { background: #dcfce7; color: #166534; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -26,6 +34,13 @@
         </div>
         <nav style="display: flex; align-items: center;">
             @auth
+                @if (auth()->user()->role === \App\Models\User::ROLE_ADMIN)
+                    <a href="{{ route('admin.dashboard') }}">Dashboard</a>
+                    <a href="{{ route('admin.verifications.index') }}">Verifikasi Penyewa</a>
+                @else
+                    <a href="{{ route('penyewa.dashboard') }}">Dashboard</a>
+                @endif
+
                 <span style="margin-right: 16px; font-size: 14px;">
                     {{ auth()->user()->nama }} ({{ strtoupper(auth()->user()->role) }})
                 </span>
