@@ -2,31 +2,59 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory;
+
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_PENYEWA = 'penyewa';
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
 
     /**
-     * Get the attributes that should be cast.
+     * Atribut yang dapat diisi secara mass-assignment.
      *
-     * @return array<string, string>
+     * @var list<string>
      */
-    protected function casts(): array
+    protected $fillable = [
+        'nik',
+        'nama',
+        'no_telp',
+        'email',
+        'password',
+        'role',
+        'status',
+    ];
+
+    /**
+     * Atribut yang disembunyikan saat serialisasi.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+    ];
+
+    /**
+     * Konversi tipe data atribut otomatis.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'password' => 'hashed',
+    ];
+
+    /**
+     * Relasi: Satu user (penyewa) dapat memiliki banyak data sewa.
+     */
+    public function rentals(): HasMany
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Rental::class);
     }
 }
