@@ -120,8 +120,9 @@ class RentalController extends Controller
             ->get();
 
         $tanggalMulai = now()->toDateString();
+        $maxDailyDays = $this->getMaxDailyDays($tanggalMulai);
 
-        return view('penyewa.rentals.step2', compact('draft', 'availableGarages', 'tanggalMulai'));
+        return view('penyewa.rentals.step2', compact('draft', 'availableGarages', 'tanggalMulai', 'maxDailyDays'));
     }
 
     /**
@@ -135,6 +136,8 @@ class RentalController extends Controller
             return redirect()->route('penyewa.rentals.create');
         }
 
+        $maxDailyDays = $this->getMaxDailyDays(now()->toDateString());
+
         $validated = $request->validate([
             'garage_id' => ['required', 'integer', 'exists:garages,id'],
             'tipe_sewa' => ['required', Rule::in([Payment::SEWA_HARIAN, Payment::SEWA_BULANAN])],
@@ -143,7 +146,7 @@ class RentalController extends Controller
                 'required_if:tipe_sewa,' . Payment::SEWA_HARIAN,
                 'integer',
                 'min:1',
-                'max:30',
+                'max:' . $maxDailyDays,
             ],
             'sisa_baterai' => ['nullable', 'numeric', 'gte:0'],
         ], [
@@ -151,7 +154,7 @@ class RentalController extends Controller
             'tipe_sewa.required' => 'Tipe sewa wajib dipilih.',
             'jumlah_hari.required_if' => 'Jumlah hari wajib diisi untuk sewa harian.',
             'jumlah_hari.min' => 'Jumlah hari minimal 1 hari.',
-            'jumlah_hari.max' => 'Jumlah hari untuk sewa harian maksimal 30 hari.',
+            'jumlah_hari.max' => "Jumlah hari untuk sewa harian maksimal {$maxDailyDays} hari (kurang 1 hari dari paket bulanan).",
             'sisa_baterai.gte' => 'Sisa baterai tidak boleh negatif.',
         ]);
 
@@ -359,6 +362,18 @@ class RentalController extends Controller
     }
 
     /**
+     * Menghitung batas maksimal jumlah hari untuk sewa harian
+     * berdasarkan selisih hari 1 bulan (no-overflow) dikurangi 1 hari.
+     */
+    public function getMaxDailyDays(string $tanggalMulai): int
+    {
+        $startDate = Carbon::parse($tanggalMulai);
+        $monthlyEndDate = $startDate->copy()->addMonthNoOverflow();
+
+        return max(1, (int) $startDate->diffInDays($monthlyEndDate) - 1);
+    }
+
+    /**
      * Menghitung total biaya sewa awal (biaya sewa garasi + biaya isi listrik penuh jika berlaku).
      */
     public function calculateInitialCost(
@@ -423,8 +438,9 @@ class RentalController extends Controller
                 ->route('admin.rentals.index')
                 ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
         }
+        $maxDailyDays = $this->getMaxDailyDays($rental->tanggal_selesai->toDateString());
 
-        return view('admin.rentals.extend', compact('rental'));
+        return view('admin.rentals.extend', compact('rental', 'maxDailyDays'));
     }
 
     /**
@@ -441,6 +457,8 @@ class RentalController extends Controller
                 ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
         }
 
+        $maxDailyDays = $this->getMaxDailyDays($rental->tanggal_selesai->toDateString());
+
         $validator = Validator::make(
             $request->only(['tipe_sewa', 'jumlah_hari']),
             [
@@ -450,7 +468,7 @@ class RentalController extends Controller
                     'required_if:tipe_sewa,' . Payment::SEWA_HARIAN,
                     'integer',
                     'min:1',
-                    'max:30',
+                    'max:' . $maxDailyDays,
                 ],
             ],
             [
@@ -459,7 +477,7 @@ class RentalController extends Controller
                 'jumlah_hari.required_if' => 'Jumlah hari wajib diisi untuk perpanjangan harian.',
                 'jumlah_hari.integer' => 'Jumlah hari harus berupa angka bulat.',
                 'jumlah_hari.min' => 'Jumlah hari minimal 1 hari.',
-                'jumlah_hari.max' => 'Jumlah hari untuk sewa harian tidak boleh lebih dari 30 hari.',
+                'jumlah_hari.max' => "Jumlah hari perpanjangan harian maksimal {$maxDailyDays} hari.",
             ]
         );
 
@@ -505,6 +523,8 @@ class RentalController extends Controller
                 ->withErrors(['rental' => 'Garasi ini tidak sedang dalam masa sewa aktif hari ini.']);
         }
 
+        $maxDailyDays = $this->getMaxDailyDays($rental->tanggal_selesai->toDateString());
+
         $validated = $request->validate([
             'tipe_sewa' => ['required', Rule::in([Payment::SEWA_HARIAN, Payment::SEWA_BULANAN])],
             'jumlah_hari' => [
@@ -512,14 +532,14 @@ class RentalController extends Controller
                 'required_if:tipe_sewa,' . Payment::SEWA_HARIAN,
                 'integer',
                 'min:1',
-                'max:30',
+                'max:' . $maxDailyDays,
             ],
             'bukti_bayar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ], [
             'tipe_sewa.required' => 'Tipe sewa perpanjangan wajib dipilih.',
             'jumlah_hari.required_if' => 'Jumlah hari wajib diisi untuk perpanjangan harian.',
             'jumlah_hari.min' => 'Jumlah hari minimal 1 hari.',
-            'jumlah_hari.max' => 'Jumlah hari untuk sewa harian tidak boleh lebih dari 30 hari.',
+            'jumlah_hari.max' => "Jumlah hari perpanjangan harian maksimal {$maxDailyDays} hari.",
             'bukti_bayar.required' => 'Bukti bayar perpanjangan wajib diupload.',
             'bukti_bayar.image' => 'Bukti bayar harus berupa gambar (JPG/PNG/WEBP).',
             'bukti_bayar.max' => 'Ukuran gambar maksimal 2 MB.',

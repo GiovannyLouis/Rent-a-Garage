@@ -77,14 +77,16 @@
             </div>
 
             <div id="jumlah_hari_group">
-                <label for="jumlah_hari" class="mb-1 block text-sm font-medium text-slate-700">Jumlah Hari (Maks. 30 hari)</label>
+                <label for="jumlah_hari" class="mb-1 block text-sm font-medium text-slate-700">
+                    Jumlah Hari (Maks. {{ $maxDailyDays }} hari)
+                </label>
                 <input
                     type="number"
                     id="jumlah_hari"
                     name="jumlah_hari"
                     value="{{ old('jumlah_hari', ($draft['jumlah_hari'] ?? 0) > 0 ? $draft['jumlah_hari'] : 1) }}"
                     min="1"
-                    max="30"
+                    max="{{ $maxDailyDays }}"
                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 >
             </div>
