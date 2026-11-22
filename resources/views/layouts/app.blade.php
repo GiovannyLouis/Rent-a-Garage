@@ -21,6 +21,8 @@
                         <a href="{{ route('admin.garages.index') }}" class="text-slate-200 hover:text-white">Kelola Garasi</a>
                     @else
                         <a href="{{ route('penyewa.dashboard') }}" class="text-slate-200 hover:text-white">Dashboard</a>
+                        <a href="{{ route('penyewa.rentals.index') }}" class="text-slate-200 hover:text-white">Sewa Saya</a>
+                        <a href="{{ route('penyewa.rentals.create') }}" class="text-slate-200 hover:text-white">Sewa Garasi Baru</a>
                     @endif
 
                     <span class="border-l border-slate-700 pl-4 text-slate-300">

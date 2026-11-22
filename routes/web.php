@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\GarageController;
+use App\Http\Controllers\RentalController;
+use App\Models\Rental;
 use App\Models\Garage;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -69,5 +71,23 @@ Route::middleware(['auth', 'role:penyewa'])
     ->prefix('penyewa')
     ->name('penyewa.')
     ->group(function () {
-        Route::view('/dashboard', 'penyewa.dashboard')->name('dashboard');
+        Route::get('/dashboard', function () {
+            $activeRentalsCount = Rental::where('user_id', Auth::id())
+                ->whereDate('tanggal_selesai', '>=', now()->toDateString())
+                ->count();
+
+            $totalRentalsCount = Rental::where('user_id', Auth::id())->count();
+
+            return view('penyewa.dashboard', compact('activeRentalsCount', 'totalRentalsCount'));
+        })->name('dashboard');
+
+        Route::get('/rentals', [RentalController::class, 'index'])->name('rentals.index');
+
+        // Form sewa bertahap 3 halaman
+        Route::get('/rentals/create', [RentalController::class, 'create'])->name('rentals.create');
+        Route::post('/rentals/step-1', [RentalController::class, 'storeStep1'])->name('rentals.step1');
+        Route::get('/rentals/step-2', [RentalController::class, 'step2'])->name('rentals.step2');
+        Route::post('/rentals/step-2', [RentalController::class, 'storeStep2'])->name('rentals.step2.store');
+        Route::get('/rentals/step-3', [RentalController::class, 'step3'])->name('rentals.step3');
+        Route::post('/rentals', [RentalController::class, 'store'])->name('rentals.store');
     });
