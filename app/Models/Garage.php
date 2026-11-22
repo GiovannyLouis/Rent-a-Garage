@@ -47,4 +47,25 @@ class Garage extends Model
     {
         return $this->hasMany(Rental::class);
     }
+
+    /**
+     * Menghitung harga sewa bulanan (25 x harga sewa harian).
+     */
+    public function getHargaBulanan(): int
+    {
+        return $this->harga_harian * 25;
+    }
+
+    /**
+     * Mengembalikan label tipe garasi yang mudah dibaca.
+     */
+    public function getLabelTipe(): string
+    {
+        return match ($this->tipe_garasi) {
+            self::TIPE_SEPEDA => 'Garasi Sepeda',
+            self::TIPE_MOBIL => 'Garasi Mobil',
+            self::TIPE_MOBIL_LISTRIK => 'Garasi Mobil Listrik',
+            default => $this->tipe_garasi,
+        };
+    }
 }

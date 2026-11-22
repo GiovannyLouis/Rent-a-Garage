@@ -4,65 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Sistem Penyewaan Garasi')</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; color: #222; }
-        header { background: #1f2937; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-        header a { color: #fff; text-decoration: none; margin-right: 16px; font-size: 14px; }
-        .container { max-width: 900px; margin: 28px auto; background: #fff; padding: 24px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input, select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button, .btn { padding: 9px 16px; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
-        button.btn-danger { background: #dc2626; }
-        .alert-success { background: #dcfce7; color: #166534; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; }
-        .alert-error { background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; }
-        .text-muted { color: #6b7280; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; margin-bottom: 24px; font-size: 14px; }
-        th, td { border: 1px solid #d1d5db; padding: 8px 10px; text-align: left; }
-        th { background: #f3f4f6; }
-        .btn-success { background: #16a34a; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-danger-sm { background: #dc2626; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-approved { background: #dcfce7; color: #166534; }
-        .badge-rejected { background: #fee2e2; color: #991b1b; }
-    </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
-    <header>
-        <div>
-            <strong>Sistem Penyewaan Garasi</strong>
-        </div>
-        <nav style="display: flex; align-items: center;">
-            @auth
-                @if (auth()->user()->role === \App\Models\User::ROLE_ADMIN)
-                    <a href="{{ route('admin.dashboard') }}">Dashboard</a>
-                    <a href="{{ route('admin.verifications.index') }}">Verifikasi Penyewa</a>
-                @else
-                    <a href="{{ route('penyewa.dashboard') }}">Dashboard</a>
-                @endif
+<body class="min-h-screen bg-slate-100 text-slate-800 antialiased">
+    <header class="bg-slate-900 text-white shadow">
+        <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-3.5">
+            <a href="{{ route('home') }}" class="text-base font-bold tracking-tight text-white">
+                Sistem Penyewaan Garasi
+            </a>
 
-                <span style="margin-right: 16px; font-size: 14px;">
-                    {{ auth()->user()->nama }} ({{ strtoupper(auth()->user()->role) }})
-                </span>
-                <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
-                    @csrf
-                    <button type="submit" class="btn-danger">Logout</button>
-                </form>
-            @else
-                <a href="{{ route('login') }}">Login</a>
-                <a href="{{ route('register') }}">Daftar</a>
-            @endauth
-        </nav>
+            <nav class="flex flex-wrap items-center gap-4 text-sm">
+                @auth
+                    @if (auth()->user()->role === \App\Models\User::ROLE_ADMIN)
+                        <a href="{{ route('admin.dashboard') }}" class="text-slate-200 hover:text-white">Dashboard</a>
+                        <a href="{{ route('admin.verifications.index') }}" class="text-slate-200 hover:text-white">Verifikasi Penyewa</a>
+                        <a href="{{ route('admin.garages.index') }}" class="text-slate-200 hover:text-white">Kelola Garasi</a>
+                    @else
+                        <a href="{{ route('penyewa.dashboard') }}" class="text-slate-200 hover:text-white">Dashboard</a>
+                    @endif
+
+                    <span class="border-l border-slate-700 pl-4 text-slate-300">
+                        {{ auth()->user()->nama }}
+                        <span class="ml-1 rounded bg-slate-700 px-1.5 py-0.5 text-xs font-semibold uppercase text-slate-200">
+                            {{ auth()->user()->role }}
+                        </span>
+                    </span>
+
+                    <form action="{{ route('logout') }}" method="POST" class="m-0">
+                        @csrf
+                        <button type="submit" class="cursor-pointer rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">
+                            Logout
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="text-slate-200 hover:text-white">Login</a>
+                    <a href="{{ route('register') }}" class="rounded bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700">
+                        Daftar
+                    </a>
+                @endauth
+            </nav>
+        </div>
     </header>
 
-    <main class="container">
+    <main class="mx-auto max-w-5xl px-4 py-8">
         @if (session('success'))
-            <div class="alert-success">{{ session('success') }}</div>
+            <div class="mb-5 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('success') }}
+            </div>
         @endif
 
         @if ($errors->any())
-            <div class="alert-error">
-                <ul style="margin: 0; padding-left: 18px;">
+            <div class="mb-5 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <ul class="list-disc space-y-1 pl-5">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -70,7 +63,9 @@
             </div>
         @endif
 
-        @yield('content')
+        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            @yield('content')
+        </div>
     </main>
 </body>
 </html>

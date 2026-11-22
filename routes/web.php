@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\GarageController;
+use App\Models\Garage;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -41,15 +43,25 @@ Route::middleware(['auth', 'role:admin'])
                 ->where('status', User::STATUS_PENDING)
                 ->count();
 
-            return view('admin.dashboard', compact('pendingCount'));
+            $totalGarages = Garage::count();
+            $availableGarages = Garage::where('status', Garage::STATUS_AVAILABLE)->count();
+
+            return view('admin.dashboard', compact('pendingCount', 'totalGarages', 'availableGarages'));
         })->name('dashboard');
 
+        // Verifikasi Pendaftar
         Route::get('/verifications', [VerificationController::class, 'index'])
             ->name('verifications.index');
         Route::patch('/verifications/{userId}/approve', [VerificationController::class, 'approve'])
             ->name('verifications.approve');
         Route::patch('/verifications/{userId}/reject', [VerificationController::class, 'reject'])
             ->name('verifications.reject');
+
+        // Manajemen Garasi
+        Route::get('/garages', [GarageController::class, 'index'])
+            ->name('garages.index');
+        Route::post('/garages', [GarageController::class, 'storeBatch'])
+            ->name('garages.store');
     });
 
 // Route khusus Penyewa
